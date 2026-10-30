@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: sino-parking-vacancy
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SINO_API_TOKEN
+        sync: false
