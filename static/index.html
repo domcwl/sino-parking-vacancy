@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sino Parking Vacancy</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --text: #1a1d23;
+      --muted: #5c6570;
+      --border: #e2e6eb;
+      --accent: #0b6bcb;
+      --accent-soft: #e8f1fb;
+      --good: #0d7a4f;
+      --warn: #b45309;
+      --bad: #b42318;
+      --shadow: 0 1px 3px rgba(16,24,40,.08), 0 8px 24px rgba(16,24,40,.06);
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1218;
+        --surface: #1a1f2a;
+        --text: #eef1f6;
+        --muted: #9aa3b2;
+        --border: #2a3140;
+        --accent: #4ea1ff;
+        --accent-soft: #1a2a40;
+        --good: #3dd68c;
+        --warn: #f5a524;
+        --bad: #f97066;
+        --shadow: 0 1px 3px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.35);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    h1 span { color: var(--accent); }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .meta {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform .08s ease, background .15s ease;
+    }
+    button:hover { background: var(--accent-soft); }
+    button:active { transform: scale(0.98); }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+    }
+    button.primary:hover { filter: brightness(1.08); background: var(--accent); }
+    button:disabled { opacity: .55; cursor: wait; }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 18px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .metrics { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+    }
+    .metric .label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 6px;
+    }
+    .metric .value {
+      font-size: 1.75rem;
+      font-weight: 750;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric .value.good { color: var(--good); }
+    .metric .value.warn { color: var(--warn); }
+    .metric .value.bad { color: var(--bad); }
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel-title h2 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+    .chart {
+      display: grid;
+      gap: 8px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(90px, 160px) 1fr 48px;
+      gap: 10px;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .bar-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+    .bar-track {
+      height: 12px;
+      background: var(--accent-soft);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #7dd3fc));
+      border-radius: inherit;
+      min-width: 2px;
+      transition: width .35s ease;
+    }
+    .bar-val {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    input[type="search"], select {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font: inherit;
+      min-width: 0;
+    }
+    input[type="search"] { flex: 1 1 220px; }
+    select { flex: 0 0 auto; }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      cursor: pointer;
+      user-select: none;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+    }
+    th:hover { color: var(--accent); }
+    th .sort { opacity: .45; margin-left: 4px; }
+    th.active .sort { opacity: 1; color: var(--accent); }
+    tr:hover td { background: var(--accent-soft); }
+    td.num { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge.full { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+    .badge.open { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+    .status {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .status.error {
+      background: color-mix(in srgb, var(--bad) 15%, transparent);
+      color: var(--bad);
+    }
+    .empty { color: var(--muted); text-align: center; padding: 28px; }
+    footer {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      padding: 0 20px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Sino <span>Parking</span> Vacancy</h1>
+      <div class="controls">
+        <div class="meta" id="statusMeta">Loading…</div>
+        <button id="refreshBtn" class="primary" type="button">Refresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="metrics" id="metrics">
+      <div class="card metric"><div class="label">Total free</div><div class="value" id="mTotal">—</div></div>
+      <div class="card metric"><div class="label">Sites</div><div class="value" id="mSites">—</div></div>
+      <div class="card metric"><div class="label">Mean vacancy</div><div class="value" id="mMean">—</div></div>
+      <div class="card metric"><div class="label">Full sites</div><div class="value" id="mFull">—</div></div>
+    </section>
+
+    <section class="card">
+      <div class="panel-title">
+        <h2>Top 12 by hourly vacancy</h2>
+        <span class="meta" id="chartNote"></span>
+      </div>
+      <div class="chart" id="chart"></div>
+    </section>
+
+    <section class="card">
+      <div class="panel-title">
+        <h2>All sites</h2>
+        <span class="meta" id="tableCount"></span>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="filter" placeholder="Filter by site ID…" autocomplete="off" />
+        <select id="statusFilter">
+          <option value="all">All statuses</option>
+          <option value="open">Has vacancy</option>
+          <option value="full">Full (0)</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-key="site" class="active">Site <span class="sort">▲</span></th>
+              <th data-key="hourly">Hourly vacancy <span class="sort"></span></th>
+              <th data-key="updated">Updated <span class="sort"></span></th>
+              <th data-key="status">Status <span class="sort"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="status" id="banner" hidden></div>
+  </main>
+
+  <footer>
+    Data via local proxy · auto-refresh every 60s · token stays on server
+  </footer>
+
+  <script>
+    const REFRESH_MS = 60000;
+    let rows = [];
+    let sortKey = "site";
+    let sortAsc = true;
+    let countdown = 60;
+    let timer = null;
+    let countdownTimer = null;
+    let lastUpdated = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function mapRecord(raw) {
+      const hourly = Number(raw.numberOfHourlyVehicles ?? raw.hourly ?? 0);
+      return {
+        site: String(raw.siteId ?? raw.site ?? "—"),
+        hourly: Number.isFinite(hourly) ? hourly : 0,
+        updated: raw.vacancyDatetime ?? raw.updated ?? "",
+      };
+    }
+
+    function normalizePayload(data) {
+      let list = [];
+      if (Array.isArray(data)) list = data;
+      else if (Array.isArray(data?.vacancies)) list = data.vacancies;
+      else if (Array.isArray(data?.data)) list = data.data;
+      else if (Array.isArray(data?.results)) list = data.results;
+      else if (data && typeof data === "object") {
+        const firstArr = Object.values(data).find(Array.isArray);
+        if (firstArr) list = firstArr;
+      }
+      return list.map(mapRecord);
+    }
+
+    function formatTime(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso);
+      return d.toLocaleString(undefined, {
+        year: "numeric", month: "short", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+      });
+    }
+
+    function updateMeta() {
+      const parts = [];
+      if (lastUpdated) {
+        parts.push("Updated " + lastUpdated.toLocaleTimeString());
+      }
+      parts.push("next in " + countdown + "s");
+      $("statusMeta").textContent = parts.join(" · ");
+    }
+
+    function computeMetrics(data) {
+      const n = data.length;
+      const total = data.reduce((s, r) => s + r.hourly, 0);
+      const full = data.filter((r) => r.hourly <= 0).length;
+      const mean = n ? total / n : 0;
+      $("mTotal").textContent = total.toLocaleString();
+      $("mTotal").className = "value good";
+      $("mSites").textContent = n.toLocaleString();
+      $("mMean").textContent = mean.toFixed(1);
+      $("mFull").textContent = full.toLocaleString();
+      $("mFull").className = "value " + (full ? "warn" : "good");
+    }
+
+    function renderChart(data) {
+      const top = [...data].sort((a, b) => b.hourly - a.hourly).slice(0, 12);
+      const max = Math.max(1, ...top.map((r) => r.hourly));
+      $("chartNote").textContent = top.length ? "highest free spaces" : "";
+      $("chart").innerHTML = top.length
+        ? top.map((r) => {
+            const pct = Math.round((r.hourly / max) * 100);
+            return `<div class="bar-row">
+              <div class="bar-label" title="${escapeHtml(r.site)}">${escapeHtml(r.site)}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+              <div class="bar-val">${r.hourly}</div>
+            </div>`;
+          }).join("")
+        : `<div class="empty">No data</div>`;
+    }
+
+    function filteredSorted() {
+      const q = $("filter").value.trim().toLowerCase();
+      const st = $("statusFilter").value;
+      let list = rows.filter((r) => {
+        if (q && !r.site.toLowerCase().includes(q)) return false;
+        if (st === "full" && r.hourly > 0) return false;
+        if (st === "open" && r.hourly <= 0) return false;
+        return true;
+      });
+      list.sort((a, b) => {
+        let av = a[sortKey], bv = b[sortKey];
+        if (sortKey === "hourly") {
+          av = a.hourly; bv = b.hourly;
+        } else if (sortKey === "status") {
+          av = a.hourly <= 0 ? 0 : 1;
+          bv = b.hourly <= 0 ? 0 : 1;
+        } else {
+          av = String(av || "");
+          bv = String(bv || "");
+        }
+        if (av < bv) return sortAsc ? -1 : 1;
+        if (av > bv) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      return list;
+    }
+
+    function renderTable() {
+      const list = filteredSorted();
+      $("tableCount").textContent = list.length + " shown / " + rows.length + " total";
+      document.querySelectorAll("th[data-key]").forEach((th) => {
+        const active = th.dataset.key === sortKey;
+        th.classList.toggle("active", active);
+        th.querySelector(".sort").textContent = active ? (sortAsc ? "▲" : "▼") : "";
+      });
+      $("tbody").innerHTML = list.length
+        ? list.map((r) => {
+            const full = r.hourly <= 0;
+            return `<tr>
+              <td><code>${escapeHtml(r.site)}</code></td>
+              <td class="num">${r.hourly}</td>
+              <td>${escapeHtml(formatTime(r.updated))}</td>
+              <td><span class="badge ${full ? "full" : "open"}">${full ? "Full" : "Open"}</span></td>
+            </tr>`;
+          }).join("")
+        : `<tr><td colspan="4" class="empty">No matching sites</td></tr>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function renderAll() {
+      computeMetrics(rows);
+      renderChart(rows);
+      renderTable();
+    }
+
+    async function load(manual = false) {
+      const btn = $("refreshBtn");
+      btn.disabled = true;
+      if (manual) btn.textContent = "Refreshing…";
+      $("banner").hidden = true;
+      try {
+        const res = await fetch("/api/vacancy", { cache: "no-store" });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || ("HTTP " + res.status));
+        }
+        const data = await res.json();
+        rows = normalizePayload(data);
+        lastUpdated = new Date();
+        countdown = 60;
+        renderAll();
+        updateMeta();
+      } catch (err) {
+        $("banner").hidden = false;
+        $("banner").className = "status error";
+        $("banner").textContent = "Failed to load vacancy data: " + err.message;
+        $("statusMeta").textContent = "Error · retry in " + countdown + "s";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Refresh";
+      }
+    }
+
+    function startTimers() {
+      clearInterval(timer);
+      clearInterval(countdownTimer);
+      timer = setInterval(() => load(false), REFRESH_MS);
+      countdownTimer = setInterval(() => {
+        countdown = Math.max(0, countdown - 1);
+        updateMeta();
+      }, 1000);
+    }
+
+    $("refreshBtn").addEventListener("click", () => {
+      countdown = 60;
+      load(true);
+      startTimers();
+    });
+    $("filter").addEventListener("input", renderTable);
+    $("statusFilter").addEventListener("change", renderTable);
+    document.querySelectorAll("th[data-key]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.key;
+        if (sortKey === key) sortAsc = !sortAsc;
+        else { sortKey = key; sortAsc = key !== "hourly"; }
+        renderTable();
+      });
+    });
+
+    load(false);
+    startTimers();
+  </script>
+</body>
+</html>
